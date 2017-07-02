@@ -1,6 +1,6 @@
 # klahvimine-be
 
-Typing game for Estonian language
+Node.js Server with MongoDB for typing game for Estonian language
 
 .env
 ```

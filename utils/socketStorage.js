@@ -1,7 +1,9 @@
 const redis = require('./redis')
 const log = require('../logger')
+const Promise = require('bluebird')
 
-// Stores connected user id and his socket clients
+//Stores connected user id and his socket clients
+//userid-sockets
 function getKey(userId) {
   return userId + process.env.SOCKET_STORAGE_POSTFIX
 }
@@ -28,7 +30,7 @@ exports.cleanClients = function() {
     .keys(pattern)
     .then(keys => {
       if (!keys || (keys && keys.length < 1)) {
-        return Promise.reject('REDIS alredy clean from sockets')
+        return Promise.resolve(0)
       }
       return redis.del(keys)
     })
@@ -36,14 +38,13 @@ exports.cleanClients = function() {
       log.info('cleaned disconnected sockets from REDIS (' + nr + ')')
     })
     .catch(err => {
-      log.warning(err)
+      log.error(err)
     })
 }
 
-exports.getClients = function(userId) {
+exports.getUserClients = function(userId) {
   let key = getKey(userId)
-
-  return redis.smembers(key).then(clients => clients)
+  return redis.smembers(key)
 }
 
 exports.removeClient = function(userId, socketId) {
