@@ -110,7 +110,7 @@ module.exports = function(socket) {
       .catch(err => {
         log.error(err)
         //socket.emit('giveNewWordFail', err)
-        return socket.emit('error', {
+        return socket.emit('game:error', {
           tag: 'newWord',
           msg: 'Unable to get new word'
         })

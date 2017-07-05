@@ -32,7 +32,7 @@ module.exports.finishDraw = function(
 
 module.exports.saveGuess = function(gameId, guess, wordId) {
   return Draw.findOneAndUpdate(
-    { gameId: gameId, wordId: wordId, typingFinished: null }, // update only active game
+    { gameId: gameId, wordId: wordId, typingFinished: null }, // update only active word
     { $push: { guesses: guess } },
     { safe: true, new: true }
   ).then(draw => draw.guesses[draw.guesses.length - 1]) // return last guess pushed one

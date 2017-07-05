@@ -35,8 +35,8 @@ module.exports.getWord = function(gameId, wordLength) {
       ])
     })
     .then(updates => {
-      //TODO better check
-      if (!updates) {
+      if (updates.indexOf(null) !== -1) {
+        //here if one of update failed - game not active
         return Promise.reject('Current game not active')
       }
       return Promise.resolve(word)
