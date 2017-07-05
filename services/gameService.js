@@ -1,20 +1,17 @@
-const Game = require('../models/Game').Game
+const Game = require('../models/game').Game
 
 module.exports.startGame = function(userId) {
   let game = new Game({
-    player: userId
+    playerId: userId
   })
   return game.save()
 }
 
 module.exports.finishAllGames = function(userId) {
   return Game.update(
-    { player: userId, finished: null },
+    { playerId: userId, finished: null },
     { finished: new Date() },
-    {
-      safe: true,
-      multi: true
-    }
+    { safe: true, multi: true }
   )
 }
 

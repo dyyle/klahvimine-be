@@ -5,8 +5,17 @@ const wordSchema = new Schema(
   {
     word: { type: String, required: true, unique: true },
     length: { type: Number },
-    guessCount: { type: Number, default: 0 },
-    mistakesCount: { type: Number, default: 0 }
+    guessedCount: { type: Number, default: 0 },
+    servedCount: { type: Number, default: 0 },
+    mistakesCount: { type: Number, default: 0 },
+    draws: [
+      {
+        drawId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Draw'
+        }
+      }
+    ]
   },
   {
     timestamps: true
