@@ -45,12 +45,12 @@ router.post('/add-words/', multipartyMiddleware, function(req, res) {
         })
       })
     })
-    .then(insWords => {
-      insWords = insWords.filter(word => typeof word !== 'undefined')
+    .then(insertedWords => {
+      insertedWords = insertedWords.filter(word => typeof word !== 'undefined')
       return res
         .status(200)
         .send(
-          insWords.length + ' words inserted ' + dups + ' duplicates found'
+          insertedWords.length + ' words inserted ' + dups + ' duplicates found'
         )
     })
     .catch(error => {
