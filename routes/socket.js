@@ -20,11 +20,11 @@ module.exports = function(socket) {
     socketStorage.removeClient(userId, socketId)
   })
 
-  socket.on('giveNewWord', () => {
+  socket.on('word:new', () => {
     giveNewWord()
   })
 
-  socket.on('letter', letter => {
+  socket.on('word:letter', letter => {
     if (!word.wordLeft) {
       //TODO stop game on client side if no word to guess
       return Promise.reject()
@@ -39,7 +39,7 @@ module.exports = function(socket) {
       .then(savedGuess => {
         if (!correctGuess) {
           word.guessMistakes++
-          return socket.emit('wrongGuess')
+          return socket.emit('word:wrongGuess')
         }
 
         word.letterIndex += 1
@@ -62,15 +62,18 @@ module.exports = function(socket) {
               return giveNewWord()
             })
         }
-        return socket.emit('updateWord', word.wordLeft)
+        return socket.emit('word:update', word.wordLeft)
       })
       .catch(err => {
         log.error(err)
-        return socket.emit('error')
+        return socket.emit('error', {
+          tag: 'guess',
+          msg: 'Unable to save guess'
+        })
       })
   })
 
-  socket.on('startGame', () => {
+  socket.on('game:start', () => {
     gameService
       .finishAllGames(userId)
       .then(() => {
@@ -80,12 +83,15 @@ module.exports = function(socket) {
         gameId = newGame._id
 
         log.info(userId + ' started new game ' + gameId)
-        socket.emit('gameCreated')
+        socket.emit('game:created')
         // TODO Notify all other user sockets
       })
       .catch(err => {
         log.error(err)
-        return socket.emit('error')
+        return socket.emit('error', {
+          tag: 'start',
+          msg: 'Unable to start the game'
+        })
       })
   })
 
@@ -99,11 +105,15 @@ module.exports = function(socket) {
         log.info(
           userId + ' "' + word.word + '"' + ' sent to socket ' + socketId
         )
-        return socket.emit('giveNewWordSuccess', word.word)
+        return socket.emit('word:recieve', word.word)
       })
       .catch(err => {
         log.error(err)
-        socket.emit('giveNewWordFail', err)
+        //socket.emit('giveNewWordFail', err)
+        return socket.emit('error', {
+          tag: 'newWord',
+          msg: 'Unable to get new word'
+        })
       })
   }
 
