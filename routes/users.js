@@ -1,9 +1,9 @@
 const express = require('express')
 const router = express.Router()
-const redis = require('../utils/redis')
 const log = require('../logger')
 const ensureLoggedIn = require('../utils/ensureLoggedIn')
 const User = require('../models/user')
+const Token = require('../models/token')
 const signToken = require('../utils/signToken')
 
 router.get('/me', ensureLoggedIn, (req, res) => {
@@ -32,14 +32,18 @@ router.get('/me', ensureLoggedIn, (req, res) => {
         return Promise.resolve(response)
       }
 
-      // save revoked token to REDIS
-      return redis
-        .set(JSON.stringify(req.user), req.user.id, req.user.exp - req.user.iat)
-        .then(() => {
-          log.info('sending updated token to ' + req.user.id)
-          response.token = signToken(user)
-          return Promise.resolve(response)
-        })
+      // save revoked token
+      let newToken = new Token({
+        userId: req.user.id,
+        token: JSON.stringify(req.user),
+        expires: req.user.exp * 1000
+      })
+      return newToken.save().then(() => {
+        log.info('token blacklisted')
+        log.info('sending updated token to ' + req.user.id)
+        response.token = signToken(user)
+        return Promise.resolve(response)
+      })
     })
     .then(response => {
       return res.json(response)

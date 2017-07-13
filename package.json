@@ -24,7 +24,6 @@
     "nodemailer": "^2.2.1",
     "passport": "^0.3.2",
     "passport-local": "^1.0.0",
-    "redis": "^2.7.1",
     "socket.io": "^1.4.5",
     "socketio-jwt": "^4.5.0",
     "util": "^0.10.3"

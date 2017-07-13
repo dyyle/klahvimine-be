@@ -1,10 +1,10 @@
 const express = require('express')
 const router = express.Router()
 const passport = require('passport')
-const redis = require('../utils/redis')
 const log = require('../logger')
 const ensureLoggedIn = require('../utils/ensureLoggedIn')
 const User = require('../models/user')
+const Token = require('../models/token')
 const signToken = require('../utils/signToken')
 
 router.post('/local/login', (req, res) => {
@@ -31,18 +31,8 @@ router.post('/local/login', (req, res) => {
       if (!user) {
         return Promise.reject({ msg: 'Could not authenticate' })
       }
-      this.user = user
 
-      // save lastpassupdate to validate token
-      // TODO add lastpassupdate field to mongo users, update on profile update
-      let lastPassUpdate = Math.floor(new Date(user.updatedAt) * 1 / 1000)
-      return redis.set(
-        user._id + process.env.USER_UPDATE_REDIS_POSTFIX,
-        lastPassUpdate
-      )
-    })
-    .then(() => {
-      return res.json({ token: signToken(this.user) })
+      return res.json({ token: signToken(user) })
     })
     .catch(err => {
       log.warning(err)
@@ -97,11 +87,15 @@ router.post('/local/signup', (req, res) => {
 
 router.post('/logout', ensureLoggedIn, (req, res) => {
   // blacklist active token
-  redis
-    .set(JSON.stringify(req.user), req.user.id, req.user.exp - req.user.iat)
-    .then(() => {
-      return res.json({ success: 'successfully logged out' })
-    })
+  let newToken = new Token({
+    userId: req.user.id,
+    token: JSON.stringify(req.user),
+    expires: req.user.exp * 1000
+  })
+  return newToken.save().then(() => {
+    log.info('token blacklisted')
+    return res.json({ success: 'successfully logged out' })
+  })
 })
 
 module.exports = router

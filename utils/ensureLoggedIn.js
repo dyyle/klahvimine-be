@@ -1,8 +1,9 @@
-const redis = require('./redis')
 const expressJwt = require('express-jwt')
 const jwtSecret = process.env.SECRET
 const validateJwt = expressJwt({ secret: jwtSecret })
 const log = require('../logger')
+const Token = require('../models/token')
+const User = require('../models/user')
 
 module.exports = function(req, res, next) {
   validateJwt(req, res, function(err) {
@@ -12,33 +13,36 @@ module.exports = function(req, res, next) {
     }
 
     // check if blacklisted
-    redis
-      .get(JSON.stringify(req.user))
+    Token.findOne({ token: JSON.stringify(req.user) })
       .then(isBlacklisted => {
         if (isBlacklisted) {
           log.info(
             'blacklisted token tried. user:' +
-              req.user +
+              req.user.id +
               ' token:' +
               isBlacklisted
           )
           return Promise.reject({ msg: 'Unauthorized' })
         }
         // check if token valid after user data changed
-        return redis.get(req.user.id + process.env.USER_UPDATE_REDIS_POSTFIX)
+        return User.findById(req.user.id).select('updatedAt')
       })
-      .then(userPasswordUpdate => {
+      .then(user => {
+        if (!user) return Promise.reject({ msg: 'Unauthorized' })
+        let lastPassUpdate = Math.floor(new Date(user.updatedAt) * 1 / 1000)
+
         // allow only if user password not changed after last token issued
-        if (userPasswordUpdate < req.user.iat) return Promise.resolve()
-        return redis
-          .set(
-            JSON.stringify(req.user),
-            req.user.id,
-            req.user.exp - req.user.iat
-          )
-          .then(() => {
-            return Promise.reject({ msg: 'Unauthorized' })
-          })
+        if (lastPassUpdate < req.user.iat) return Promise.resolve()
+
+        let newToken = new Token({
+          userId: req.user.id,
+          token: JSON.stringify(req.user),
+          expires: req.user.exp * 1000
+        })
+        return newToken.save().then(() => {
+          log.info('token blacklisted')
+          return Promise.reject({ msg: 'Unauthorized' })
+        })
       })
       .then(() => {
         return next()

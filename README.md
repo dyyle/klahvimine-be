@@ -13,9 +13,6 @@ SOCKET_REDIS_POSTFIX = -sockets
 
 PORT=3000
 
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
 SITE_URL=https://app.ee
 
 EMAIL=app@app.ee
