@@ -7,7 +7,7 @@ socketStorage.cleanClients()
 
 module.exports = function(socket) {
   //socketioJwt, id from token > socket.decoded_token.id
-  let userId = '5958785b3fce7c7e4f95f388'
+  let userId = socket.decoded_token.id
   let socketId = socket.id
   let gameId
 
@@ -27,7 +27,11 @@ module.exports = function(socket) {
   socket.on('word:letter', letter => {
     if (!word.wordLeft) {
       //TODO stop game on client side if no word to guess
-      return Promise.reject()
+      //send event to client side
+      return socket.emit('game:error', {
+        tag: 'guess',
+        msg: 'Unable to save guess'
+      })
     }
 
     let correctGuess = word.wordLeft.charAt(0) === letter
@@ -65,8 +69,8 @@ module.exports = function(socket) {
         return socket.emit('word:update', word.wordLeft)
       })
       .catch(err => {
-        log.error(err)
-        return socket.emit('error', {
+        //log.error(err)
+        return socket.emit('game:error', {
           tag: 'guess',
           msg: 'Unable to save guess'
         })
@@ -88,7 +92,7 @@ module.exports = function(socket) {
       })
       .catch(err => {
         log.error(err)
-        return socket.emit('error', {
+        return socket.emit('game:error', {
           tag: 'start',
           msg: 'Unable to start the game'
         })

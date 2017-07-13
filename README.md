@@ -9,7 +9,7 @@ MONGODB_URI=mongodb://host:port/db
 SECRET=this is the secret secret secret 12356
 TOKEN_EXPIRES_IN_SECONDS=60*60*24
 
-SOCKET_STORAGE_POSTFIX = -sockets
+SOCKET_REDIS_POSTFIX = -sockets
 
 PORT=3000
 

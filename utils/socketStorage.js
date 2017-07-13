@@ -5,7 +5,7 @@ const Promise = require('bluebird')
 //Stores connected user id and his socket clients
 //userid-sockets
 function getKey(userId) {
-  return userId + process.env.SOCKET_STORAGE_POSTFIX
+  return userId + process.env.SOCKET_REDIS_POSTFIX
 }
 
 exports.addClient = function(userId, socketId) {
@@ -24,7 +24,7 @@ exports.addClient = function(userId, socketId) {
 }
 
 exports.cleanClients = function() {
-  let pattern = '*' + process.env.SOCKET_STORAGE_POSTFIX
+  let pattern = '*' + process.env.SOCKET_REDIS_POSTFIX
 
   return redis
     .keys(pattern)

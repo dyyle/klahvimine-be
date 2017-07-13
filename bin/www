@@ -8,6 +8,9 @@ app.set('port', process.env.PORT)
 
 const http = require('http')
 const socket = require('../routes/socket.js')
+const socketioJwt = require('socketio-jwt')
+const jwtSecret = process.env.SECRET
+
 const log = require('../logger')
 
 const server = http.createServer(app)
@@ -15,7 +18,14 @@ server.listen(process.env.PORT)
 server.on('error', onError)
 server.on('listening', onListening)
 
-const io = require('socket.io')(server)
+var io = require('socket.io')(server)
+io.use(
+  socketioJwt.authorize({
+    secret: jwtSecret,
+    handshake: true
+  })
+)
+
 io.sockets.on('connection', socket)
 
 function onError(error) {
@@ -39,5 +49,9 @@ function onError(error) {
 }
 
 function onListening() {
-  log.info(process.env.APP_NAME + ' process started')
+  log.info(
+    process.env.APP_NAME +
+      ' process started in ' +
+      (process.env.PRODUCTION ? 'production' : 'development')
+  )
 }
