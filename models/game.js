@@ -13,10 +13,8 @@ const gameSchema = new Schema(
     playedUntilEnd: { type: Boolean, default: false },
     draws: [
       {
-        drawId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Draw'
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Draw'
       }
     ]
   },
@@ -27,6 +25,4 @@ const gameSchema = new Schema(
 
 const Game = mongoose.model('Game', gameSchema)
 
-module.exports = {
-  Game: Game
-}
+module.exports = Game

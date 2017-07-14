@@ -27,12 +27,14 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(passport.initialize())
 
 // Routes
-var upload = require('./routes/upload')
+let upload = require('./routes/upload')
 app.use('/api/upload', upload)
-var auth = require('./routes/auth')
+let auth = require('./routes/auth')
 app.use('/api/auth', auth)
-var users = require('./routes/users')
+let users = require('./routes/users')
 app.use('/api/users', users)
+let games = require('./routes/games')
+app.use('/api/games', games)
 
 // catch 404
 app.use(function(req, res) {

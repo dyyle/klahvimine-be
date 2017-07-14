@@ -1,5 +1,5 @@
-const Word = require('../models/word').Word
-const Game = require('../models/game').Game
+const Word = require('../models/word')
+const Game = require('../models/game')
 const drawService = require('../services/drawService')
 const Promise = require('bluebird')
 
@@ -24,12 +24,12 @@ module.exports.getWord = function(gameId, wordLength) {
       return Promise.all([
         Game.findOneAndUpdate(
           { _id: gameId, finished: null }, // update only active game
-          { $push: { draws: { drawId: draw._id } } },
+          { $push: { draws: draw._id } },
           { safe: true, new: true }
         ),
         Word.findOneAndUpdate(
           { _id: word._id },
-          { $push: { draws: { drawId: draw._id } } },
+          { $push: { draws: draw._id } },
           { safe: true, new: true }
         )
       ])

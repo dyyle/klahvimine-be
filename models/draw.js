@@ -3,13 +3,13 @@ const Schema = mongoose.Schema
 
 const drawSchema = new Schema(
   {
-    gameId: {
+    game: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game',
       required: true
     },
 
-    wordId: {
+    word: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Word',
       required: true
@@ -43,6 +43,4 @@ const drawSchema = new Schema(
 
 const Draw = mongoose.model('Draw', drawSchema)
 
-module.exports = {
-  Draw: Draw
-}
+module.exports = Draw

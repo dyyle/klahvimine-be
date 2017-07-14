@@ -1,7 +1,7 @@
-const Draw = require('../models/draw').Draw
+const Draw = require('../models/draw')
 
 module.exports.newDraw = function(gameId, wordId) {
-  let newDraw = new Draw({ gameId: gameId, wordId: wordId })
+  let newDraw = new Draw({ game: gameId, word: wordId })
   return newDraw.save()
 }
 
@@ -21,8 +21,8 @@ module.exports.finishDraw = function(
 
   return Draw.findOneAndUpdate(
     {
-      gameId: gameId,
-      wordId: wordId,
+      game: gameId,
+      word: wordId,
       typed: null // update only not finished word
     },
     update,
@@ -32,7 +32,7 @@ module.exports.finishDraw = function(
 
 module.exports.saveGuess = function(gameId, guess, wordId) {
   return Draw.findOneAndUpdate(
-    { gameId: gameId, wordId: wordId, typingFinished: null }, // update only active word
+    { game: gameId, word: wordId, typingFinished: null }, // update only active word
     { $push: { guesses: guess } },
     { safe: true, new: true }
   ).then(draw => draw.guesses[draw.guesses.length - 1]) // return last guess pushed one

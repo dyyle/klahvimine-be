@@ -1,4 +1,4 @@
-const Game = require('../models/game').Game
+const Game = require('../models/game')
 
 module.exports.startGame = function(userId) {
   let game = new Game({
