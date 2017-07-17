@@ -1,15 +1,18 @@
 const log = require('../logger')
 const gameService = require('../services/gameService')
 const wordService = require('../services/wordService')
+const drawService = require('../services/drawService')
 const socketStorage = require('../utils/socketStorage')
 socketStorage.cleanClients()
 
-module.exports = function(socket, io) {
+module.exports = function(socket) {
   //socketioJwt, id from token > socket.decoded_token.id
-  let userId = '5958785b3fce7c7e4f95f388'
+  let userId = socket.decoded_token.id
   let socketId = socket.id
   let gameId
-  let currentWord
+
+  let word = {} //Object for storing data between user events
+  let wordLength = 5
 
   socketStorage.addClient(userId, socketId)
 
@@ -17,51 +20,143 @@ module.exports = function(socket, io) {
     socketStorage.removeClient(userId, socketId)
   })
 
-  socket.on('giveNewWord', () => {
+  socket.on('word:new', () => {
     giveNewWord()
   })
 
-  socket.on('letter', l => {
-    //TODO calculate time for guess and save to db
-
-    let correctGuess = currentWord.charAt(0) === l
-    if (!correctGuess) {
-      return socket.emit('wrongGuess')
+  socket.on('word:letter', letter => {
+    if (!word.wordLeft) {
+      //TODO stop game on client side if no word to guess
+      //send event to client side
+      return socket.emit('game:error', {
+        tag: 'guess',
+        msg: 'Unable to save guess'
+      })
     }
 
-    currentWord = currentWord.slice(1)
-    if (currentWord.length === 0) {
-      return giveNewWord()
-    }
+    let correctGuess = word.wordLeft.charAt(0) === letter
+    let guessObj = makeGuessObj(letter, correctGuess)
+    word.lastGuess = guessObj
 
-    return socket.emit('updateWord', currentWord)
+    drawService
+      .saveGuess(gameId, guessObj, word._id)
+      .then(savedGuess => {
+        if (!correctGuess) {
+          word.guessMistakes++
+          return socket.emit('word:wrongGuess')
+        }
+
+        word.letterIndex += 1
+        word.wordLeft = word.wordLeft.slice(1)
+
+        // whole word guessed
+        if (word.wordLeft.length === 0) {
+          let totalTime = savedGuess.ms.fromServed
+          let averageSpeed = parseInt(totalTime / word.word.length)
+
+          return drawService
+            .finishDraw(
+              averageSpeed,
+              gameId,
+              word.guessMistakes,
+              totalTime,
+              word._id
+            )
+            .then(() => {
+              return giveNewWord()
+            })
+        }
+        return socket.emit('word:update', word.wordLeft)
+      })
+      .catch(err => {
+        //log.error(err)
+        return socket.emit('game:error', {
+          tag: 'guess',
+          msg: 'Unable to save guess'
+        })
+      })
   })
 
-  socket.on('startGame', () => {
+  socket.on('game:start', () => {
     gameService
       .finishAllGames(userId)
-      .then(finishedGames => {
-        log.info(finishedGames)
+      .then(() => {
         return gameService.startGame(userId)
       })
       .then(newGame => {
-        log.info('started new game ' + newGame._id)
         gameId = newGame._id
-        socket.emit('gameCreated')
+
+        log.info(userId + ' started new game ' + gameId)
+        socket.emit('game:created')
         // TODO Notify all other user sockets
+      })
+      .catch(err => {
+        log.error(err)
+        return socket.emit('game:error', {
+          tag: 'start',
+          msg: 'Unable to start the game'
+        })
       })
   })
 
+  //HELPERS
   let giveNewWord = function() {
     return wordService
-      .getWord(gameId)
-      .then(word => {
-        currentWord = word
-        log.info('"' + word + '"' + ' sent to socket ' + socketId)
-        return socket.emit('giveNewWordSuccess', word)
+      .getWord(gameId, wordLength)
+      .then(w => {
+        word = makeWordObj(w)
+
+        log.info(
+          userId + ' "' + word.word + '"' + ' sent to socket ' + socketId
+        )
+        return socket.emit('word:recieve', word.word)
       })
       .catch(err => {
-        socket.emit('giveNewWordFail', { error: err })
+        log.error(err)
+        //socket.emit('giveNewWordFail', err)
+        return socket.emit('game:error', {
+          tag: 'newWord',
+          msg: 'Unable to get new word'
+        })
       })
+  }
+
+  let makeWordObj = function(w) {
+    return {
+      _id: w._id,
+      word: w.word,
+      letterIndex: 0,
+      served: w.served,
+      wordLeft: w.word,
+      extraFromWrong: 0,
+      guessMistakes: 0,
+
+      //For calculations on first run
+      lastGuess: {
+        ms: {
+          fromServed: 0,
+          fromPrevKey: 0
+        }
+      }
+    }
+  }
+
+  let makeGuessObj = function(userString, correctGuess) {
+    let timestamp = Date.now()
+    let fromServed = timestamp - word.served
+    let fromPrevKey = fromServed - word.lastGuess.ms.fromServed
+    let correctString = word.wordLeft.charAt(0)
+
+    return {
+      index: word.letterIndex,
+      timestamp: timestamp,
+      userString: userString,
+      correctString: correctString,
+      correctGuess: correctGuess,
+      ms: {
+        fromServed: fromServed,
+        fromPrevKey: fromPrevKey
+      }
+    }
   }
 }

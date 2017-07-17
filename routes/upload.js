@@ -3,7 +3,7 @@ const router = express.Router()
 const multiparty = require('connect-multiparty')
 const multipartyMiddleware = multiparty()
 
-const Word = require('../models/word').Word
+const Word = require('../models/word')
 const Promise = require('bluebird')
 
 const fs = require('fs')
@@ -18,7 +18,7 @@ router.post('/add-words/', multipartyMiddleware, function(req, res) {
     return res.status(400).send('no file found with the request')
   }
 
-  // has to be < 10mb
+  // has to be < 10mb m10 1000k 1000b
   if (file.size > 10 * 1000 * 1000) {
     return res.status(400).send('file too large')
   }
@@ -32,26 +32,43 @@ router.post('/add-words/', multipartyMiddleware, function(req, res) {
   fs
     .readFileAsync(file.path)
     .then(fileData => {
-      let words = fileData.toString().split('\n').filter(word => word !== '')
+      this.words = fileData.toString().split('\n').filter(word => word !== '')
 
-      return Promise.map(words, word => {
-        return new Word({ word: word }).save().catch(err => {
-          // if duplicate error continue loop
-          if (err.code === 11000) {
-            dups++
-          } else {
-            return Promise.reject('Fail import process for Mongo error')
-          }
-        })
-      })
+      log.info(this.words.length + ' trying to insert')
+      this.savedCount = 0
+
+      return Promise.map(
+        this.words,
+        word => {
+          return new Word({ word: word, length: word.length })
+            .save()
+            .then(() => {
+              this.savedCount++
+              if (this.savedCount % 1000 === 0) {
+                log.info('saved count ' + this.savedCount)
+              }
+              return
+            })
+            .catch(err => {
+              // if duplicate error continue loop
+              if (err.code === 11000) {
+                if (dups % 1000 === 0) {
+                  log.info('dups count ' + dups)
+                }
+                return dups++
+              }
+
+              log.warn(err)
+              return Promise.reject('Fail import process for Mongo error')
+            })
+        },
+        { concurrency: 100 }
+      )
     })
-    .then(insWords => {
-      insWords = insWords.filter(word => typeof word !== 'undefined')
+    .then(() => {
       return res
         .status(200)
-        .send(
-          insWords.length + ' words inserted ' + dups + ' duplicates found'
-        )
+        .send(this.savedCount + ' words inserted ' + dups + ' duplicates found')
     })
     .catch(error => {
       log.error(error)

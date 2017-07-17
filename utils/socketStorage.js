@@ -1,22 +1,22 @@
-const redis = require('./redis')
 const log = require('../logger')
 const Promise = require('bluebird')
+const Socket = require('../models/Socket')
 
 //Stores connected user id and his socket clients
-//userid-sockets
-function getKey(userId) {
-  return userId + process.env.SOCKET_STORAGE_POSTFIX
-}
 
 exports.addClient = function(userId, socketId) {
-  let key = getKey(userId)
+  let newSocket = new Socket({
+    userId: userId,
+    socketId: socketId
+  })
 
-  return redis
-    .sadd(key, socketId)
+  return newSocket
+    .save()
     .then(() => {
-      return redis.scard(key).then(count => {
-        log.info(userId + ' connected socket ' + socketId + ' (' + count + ')')
-      })
+      return Socket.count({ userId: userId })
+    })
+    .then(count => {
+      log.info(userId + ' connected socket ' + socketId + ' (' + count + ')')
     })
     .catch(err => {
       log.error(err)
@@ -24,40 +24,28 @@ exports.addClient = function(userId, socketId) {
 }
 
 exports.cleanClients = function() {
-  let pattern = '*' + process.env.SOCKET_STORAGE_POSTFIX
-
-  return redis
-    .keys(pattern)
-    .then(keys => {
-      if (!keys || (keys && keys.length < 1)) {
-        return Promise.resolve(0)
-      }
-      return redis.del(keys)
+  return Socket.count({})
+    .then(count => {
+      if (count < 1) return Promise.resolve(0)
+      return Socket.remove({}).then(removed => removed.result.n)
     })
-    .then(nr => {
-      log.info('cleaned disconnected sockets from REDIS (' + nr + ')')
+    .then(removed => {
+      log.info('cleaned (' + removed + ') disconnected sockets')
     })
     .catch(err => {
       log.error(err)
     })
 }
 
-exports.getUserClients = function(userId) {
-  let key = getKey(userId)
-  return redis.smembers(key)
-}
-
 exports.removeClient = function(userId, socketId) {
-  let key = getKey(userId)
+  return Socket.remove({ userId: userId, socketId: socketId })
+    .then(removed => {
+      if (removed.result.n < 1) log.info('no sockets removed from DB')
 
-  return redis
-    .srem(key, socketId)
-    .then(() => {
-      return redis.scard(key).then(count => {
-        log.info(
-          userId + ' disconnected socket ' + socketId + ' (' + count + ')'
-        )
-      })
+      return Socket.count({ userId: userId })
+    })
+    .then(count => {
+      log.info(userId + ' disconnected socket ' + socketId + ' (' + count + ')')
     })
     .catch(err => {
       log.error(err)

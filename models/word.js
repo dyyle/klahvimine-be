@@ -4,22 +4,22 @@ const Schema = mongoose.Schema
 const wordSchema = new Schema(
   {
     word: { type: String, required: true, unique: true },
-    length: { type: Number },
-    guessCount: { type: Number, default: 0 },
-    mistakesCount: { type: Number, default: 0 }
+    length: { type: Number, required: true },
+    guessedCount: { type: Number, default: 0 },
+    servedCount: { type: Number, default: 0 },
+    mistakesCount: { type: Number, default: 0 },
+    draws: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Draw'
+      }
+    ]
   },
   {
     timestamps: true
   }
 )
 
-wordSchema.pre('save', function(next) {
-  this.length = this.word.length
-  next()
-})
-
 const Word = mongoose.model('Word', wordSchema)
 
-module.exports = {
-  Word: Word
-}
+module.exports = Word
