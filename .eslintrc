@@ -5,17 +5,8 @@
   },
   "extends": "eslint:recommended",
   "rules": {
-    "semi": [
-      "warn",
-      "never"
-    ],
-    "eqeqeq": [
-      "warn",
-      "always"
-    ],
-    "quotes": [
-      "warn",
-      "single"
-    ]
+    "semi": ["warn", "never"],
+    "eqeqeq": ["warn", "always"],
+    "quotes": ["warn", "single"]
   }
 }
